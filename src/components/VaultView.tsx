@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { FileCode, Upload, Loader2, ChevronRight, ChevronDown, Rocket, Check, Folder, Search, Command, Share2 } from 'lucide-react';
 import { FileNode, filterTree } from '@/utils/fileHelpers';
+import MonacoEditorComponent from './MonacoEditor';
+import TabBar from './TabBar';
 
 interface VaultViewProps {
   // Optional for Read-Only Mode
   onUpload?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onAddFile?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   readOnly?: boolean;
   
   // Share Action
@@ -20,6 +21,7 @@ import { useVaultStore } from '@/store/vaultStore';
 
 export default function VaultView({
   onUpload,
+  onAddFile,
   readOnly = false,
   onShareFull,
   onShareSingle,
@@ -159,6 +161,30 @@ export default function VaultView({
             </label>
           )}
 
+          {!readOnly && onAddFile && (
+            <label className="
+              group flex items-center justify-center w-full py-2 px-3 
+              bg-[#2a1a2a] hover:bg-[#352535] border border-[#443344] 
+              rounded-md cursor-pointer transition-all duration-200
+              shadow-sm hover:shadow-md
+            ">
+              {store.isUploading ? (
+                <Loader2 className="animate-spin mr-2 text-purple-400" size={14}/>
+              ) : (
+                <FileCode className="mr-2 text-gray-400 group-hover:text-purple-400 transition-colors" size={14}/>
+              )}
+              <span className="text-[13px] font-medium text-gray-300 group-hover:text-white transition-colors">
+                Add File(s)
+              </span>
+              <input 
+                type="file" 
+                className="hidden" 
+                onChange={onAddFile}
+                multiple 
+              />
+            </label>
+          )}
+
           <div className="relative group">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-blue-400 transition-colors" size={14} />
             <input 
@@ -234,151 +260,128 @@ export default function VaultView({
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#000] relative">
-        {/* Header Bar */}
-        <header className="h-12 flex items-center justify-between px-4 border-b border-[#1f1f1f] bg-[#0a0a0a]/50 backdrop-blur-md select-none">
-          {/* Breadcrumbs / File Name */}
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="flex items-center gap-2 text-gray-500 text-sm">
-               <Search size={14} />
-               <span className="text-[13px]">Vault</span>
+        <div className="flex-1 flex flex-col min-w-0 bg-[#000] relative">
+          {/* Tab Bar */}
+          {!readOnly && <TabBar />}
+          
+          {/* Header Bar */}
+          <header className="h-12 flex items-center justify-between px-4 border-b border-[#1f1f1f] bg-[#0a0a0a]/50 backdrop-blur-md select-none">
+            {/* Breadcrumbs / File Name */}
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="flex items-center gap-2 text-gray-500 text-sm">
+                 <Search size={14} />
+                 <span className="text-[13px]">Vault</span>
+              </div>
+              {store.selectedFile ? (
+                <>
+                  <ChevronRight size={14} className="text-gray-600" />
+                  <div className="flex items-center gap-2 text-gray-200">
+                    <FileCode size={14} className="text-blue-400" />
+                    <span className="text-[13px] font-medium tracking-wide">{store.selectedFile.path}</span>
+                  </div>
+                </>
+              ) : (
+                 <span className="text-[13px] text-gray-600 italic ml-2">Select a file to view</span>
+              )}
             </div>
-            {store.selectedFile ? (
-              <>
-                <ChevronRight size={14} className="text-gray-600" />
-                <div className="flex items-center gap-2 text-gray-200">
-                  <FileCode size={14} className="text-blue-400" />
-                  <span className="text-[13px] font-medium tracking-wide">{store.selectedFile.path}</span>
-                </div>
-              </>
-            ) : (
-               <span className="text-[13px] text-gray-600 italic ml-2">Select a file to view</span>
-            )}
-          </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2">
-            {!readOnly && store.session && (
-              <>
-                {/* Share Full Project */}
-                <button
-                  onClick={onShareFull}
-                  disabled={store.isSharing}
-                  className={`
-                    group flex items-center gap-2 px-3 py-1.5 rounded-full 
-                    border transition-all duration-300 ease-out
-                    bg-purple-600 hover:bg-purple-500 border-transparent text-white shadow-[0_0_15px_rgba(147,51,234,0.3)] hover:shadow-[0_0_20px_rgba(147,51,234,0.5)]
-                  `}
-                >
-                  {store.isSharing && store.shareType === 'full' ? <Loader2 size={14} className="animate-spin"/> : <Share2 size={14} />}
-                  <span className="text-[12px] font-medium">
-                    {store.isSharing && store.shareType === 'full' ? 'Bundling...' : 'Share Project'}
-                  </span>
-                </button>
-
-                {/* Share Single File (Only if file selected) */}
-                {store.selectedFile && (
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              {!readOnly && store.session && (
+                <>
+                  {/* Share Full Project */}
                   <button
-                    onClick={onShareSingle}
+                    onClick={onShareFull}
                     disabled={store.isSharing}
                     className={`
                       group flex items-center gap-2 px-3 py-1.5 rounded-full 
                       border transition-all duration-300 ease-out
-                      bg-gray-700 hover:bg-gray-600 border-transparent text-white
+                      bg-purple-600 hover:bg-purple-500 border-transparent text-white shadow-[0_0_15px_rgba(147,51,234,0.3)] hover:shadow-[0_0_20px_rgba(147,51,234,0.5)]
                     `}
                   >
-                    {store.isSharing && store.shareType === 'single' ? <Loader2 size={14} className="animate-spin"/> : <FileCode size={14} />}
+                    {store.isSharing && store.shareType === 'full' ? <Loader2 size={14} className="animate-spin"/> : <Share2 size={14} />}
                     <span className="text-[12px] font-medium">
-                      {store.isSharing && store.shareType === 'single' ? 'Saving...' : 'Share File'}
+                      {store.isSharing && store.shareType === 'full' ? 'Bundling...' : 'Share Project'}
                     </span>
                   </button>
-                )}
 
-                <button
-                  onClick={handleCopyInstructions}
-                  className={`
-                    group flex items-center gap-2 px-3 py-1.5 rounded-full 
-                    border transition-all duration-300 ease-out
-                    ${copySuccess 
-                      ? 'bg-green-500/10 border-green-500/30 text-green-400' 
-                      : 'bg-blue-600 hover:bg-blue-500 border-transparent text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_20px_rgba(37,99,235,0.5)]'}
-                  `}
-                >
-                  {copySuccess ? <Check size={14} /> : <Rocket size={14} className="group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />}
-                  <span className="text-[12px] font-medium">
-                    {copySuccess ? 'Copied' : 'Connect AI'}
-                  </span>
-                </button>
-              </>
-            )}
-            {readOnly && (
-               <div className="px-3 py-1.5 rounded-full bg-gray-800 border border-gray-700 text-gray-400 text-[12px] font-medium flex items-center gap-2">
-                 <Share2 size={14} />
-                 Read Only Mode
-               </div>
-            )}
-          </div>
-        </header>
+                  {/* Share Single File (Only if file selected) */}
+                  {store.selectedFile && (
+                    <button
+                      onClick={onShareSingle}
+                      disabled={store.isSharing}
+                      className={`
+                        group flex items-center gap-2 px-3 py-1.5 rounded-full 
+                        border transition-all duration-300 ease-out
+                        bg-gray-700 hover:bg-gray-600 border-transparent text-white
+                      `}
+                    >
+                      {store.isSharing && store.shareType === 'single' ? <Loader2 size={14} className="animate-spin"/> : <FileCode size={14} />}
+                      <span className="text-[12px] font-medium">
+                        {store.isSharing && store.shareType === 'single' ? 'Saving...' : 'Share File'}
+                      </span>
+                    </button>
+                  )}
 
-        {/* Code Editor Area */}
-        <main className="flex-1 relative overflow-hidden bg-[#000]">
-          {store.selectedFile ? (
-            <div className="absolute inset-0 overflow-auto custom-scrollbar">
-              <SyntaxHighlighter
-                language={
-                   store.selectedFile.path.endsWith('.ts') || store.selectedFile.path.endsWith('.tsx') ? 'typescript' : 
-                   store.selectedFile.path.endsWith('.js') || store.selectedFile.path.endsWith('.jsx') ? 'javascript' : 
-                   store.selectedFile.path.endsWith('.json') ? 'json' : 
-                   store.selectedFile.path.endsWith('.css') ? 'css' : 
-                   store.selectedFile.path.endsWith('.html') ? 'html' : 'text'
-                }
-                style={vscDarkPlus}
-                customStyle={{ 
-                  margin: 0, 
-                  padding: '1.5rem',
-                  height: '100%', 
-                  fontSize: '14px', 
-                  lineHeight: '1.6', 
-                  background: '#000',
-                  fontFamily: 'var(--font-jetbrains-mono), monospace'
-                }}
-                showLineNumbers={true}
-                lineNumberStyle={{ minWidth: '3em', paddingRight: '1.5em', color: '#444', textAlign: 'right' }}
-                wrapLines={true}
-              >
-                {store.selectedFile.content}
-              </SyntaxHighlighter>
-            </div>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-               <div className="text-center opacity-20 select-none">
-                 <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-tr from-gray-800 to-black border border-gray-800 flex items-center justify-center">
-                    <Command size={48} className="text-gray-500" />
+                  <button
+                    onClick={handleCopyInstructions}
+                    className={`
+                      group flex items-center gap-2 px-3 py-1.5 rounded-full 
+                      border transition-all duration-300 ease-out
+                      ${copySuccess 
+                        ? 'bg-green-500/10 border-green-500/30 text-green-400' 
+                        : 'bg-blue-600 hover:bg-blue-500 border-transparent text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_20px_rgba(37,99,235,0.5)]'}
+                    `}
+                  >
+                    {copySuccess ? <Check size={14} /> : <Rocket size={14} className="group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />}
+                    <span className="text-[12px] font-medium">
+                      {copySuccess ? 'Copied' : 'Connect AI'}
+                    </span>
+                  </button>
+                </>
+              )}
+              {readOnly && (
+                 <div className="px-3 py-1.5 rounded-full bg-gray-800 border border-gray-700 text-gray-400 text-[12px] font-medium flex items-center gap-2">
+                   <Share2 size={14} />
+                   Read Only Mode
                  </div>
-                 <h3 className="text-2xl font-bold text-gray-500 mb-2">The Vault</h3>
-                 <p className="text-gray-600 font-mono text-sm">
-                   {readOnly ? 'Viewing Shared Project' : 'Ready for connection...'}
-                 </p>
-               </div>
+              )}
             </div>
-          )}
-        </main>
-        
-        {/* Status Bar */}
-        <footer className="h-6 bg-[#0a0a0a] border-t border-[#1f1f1f] flex items-center px-3 justify-between text-[10px] text-gray-500 select-none">
-           <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                UTF-8
-              </span>
-              <span>Typescript</span>
-           </div>
-           <div className="flex items-center gap-3">
-              <span>Ln 1, Col 1</span>
-              <span>4 spaces</span>
-           </div>
-        </footer>
-      </div>
+          </header>
+
+          {/* Code Editor Area */}
+          <main className="flex-1 relative overflow-hidden bg-[#000]">
+            {store.selectedFile ? (
+              <div className="absolute inset-0">
+                {!readOnly ? (
+                  <MonacoEditorComponent
+                    value={store.selectedFile.content}
+                    onChange={(value) => store.updateTabContent(store.selectedFile!.path, value)}
+                    onSave={() => store.markTabDirty(store.selectedFile!.path, false)}
+                  />
+                ) : (
+                  <div className="absolute inset-0 overflow-auto custom-scrollbar">
+                    <pre className="p-6 text-gray-300 font-mono text-sm whitespace-pre-wrap">
+                      {store.selectedFile.content}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                 <div className="text-center opacity-20 select-none">
+                   <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-tr from-gray-800 to-black border border-gray-800 flex items-center justify-center">
+                      <Command size={48} className="text-gray-500" />
+                   </div>
+                   <h3 className="text-2xl font-bold text-gray-500 mb-2">The Vault</h3>
+                   <p className="text-gray-600 font-mono text-sm">
+                     {readOnly ? 'Viewing Shared Project' : 'Ready for connection...'}
+                   </p>
+                 </div>
+              </div>
+            )}
+          </main>
+        </div>
     </div>
   );
 }

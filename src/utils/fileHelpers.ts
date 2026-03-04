@@ -7,11 +7,48 @@ export interface FileNode {
   isOpen?: boolean;
 }
 
+// File blacklist for optimization - Master Architect's directive
+const FILE_BLACKLIST = [
+  'node_modules',
+  '.git',
+  '.next',
+  'dist',
+  '.env',
+  '.env.local',
+  '.env.development',
+  '.env.production',
+  '.DS_Store',
+  'Thumbs.db',
+  '.vscode',
+  '.idea',
+  'coverage',
+  '.nyc_output',
+  '.cache',
+  'tmp',
+  'temp'
+];
+
+// Function to check if a file/folder should be blacklisted
+export function isBlacklisted(path: string): boolean {
+  const pathParts = path.split('/');
+  return FILE_BLACKLIST.some(blacklistedItem => 
+    pathParts.some(part => part === blacklistedItem || part.startsWith(blacklistedItem))
+  );
+}
+
+// Function to filter files based on blacklist
+export function filterBlacklistedFiles(files: { path: string; content?: string }[]): { path: string; content?: string }[] {
+  return files.filter(file => !isBlacklisted(file.path));
+}
+
 export function buildFileTree(files: { path: string; content?: string }[]): FileNode[] {
+  // Filter out blacklisted files before building tree
+  const filteredFiles = filterBlacklistedFiles(files);
+  
   const rootNodes: FileNode[] = [];
   const nodeMap: { [key: string]: FileNode } = {};
 
-  files.forEach(file => {
+  filteredFiles.forEach(file => {
     const parts = file.path.split('/');
     let currentPath = '';
     

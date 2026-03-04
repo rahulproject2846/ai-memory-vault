@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import VaultView from '@/components/VaultView';
+import { X, Check, Copy } from 'lucide-react';
 import { buildFileTree } from '@/utils/fileHelpers';
-import { Copy, Check, X } from 'lucide-react';
 import { useVaultStore } from '@/store/vaultStore';
+import VaultView from '@/components/VaultView';
+import ProjectSwitcher from '@/components/ProjectSwitcher';
 
 export default function VaultPage() {
   const store = useVaultStore();
@@ -14,10 +15,16 @@ export default function VaultPage() {
   useEffect(() => {
     const initSession = async () => {
       try {
-        const res = await fetch('/api/session', { method: 'POST' });
-        if (!res.ok) throw new Error('Failed to create session');
-        const data = await res.json();
-        store.setSession(data);
+        // First, try to hydrate from IndexedDB
+        await store.hydrateFromDB();
+        
+        // If no session exists, create a new one
+        if (!store.session) {
+          const res = await fetch('/api/session', { method: 'POST' });
+          if (!res.ok) throw new Error('Failed to create session');
+          const data = await res.json();
+          store.setSession(data);
+        }
       } catch (err) {
         console.error('Failed to init session', err);
         store.setError('Failed to connect to Vault Server (MongoDB). Ensure DB is running.');
@@ -62,8 +69,56 @@ export default function VaultPage() {
 
     const rootNodes = buildFileTree(filesArray);
 
+    // Update store
     store.setFilesMap(newFilesMap);
     store.setFileTree(rootNodes);
+    
+    // Save to IndexedDB
+    await store.saveToDB();
+    
+    store.setIsUploading(false);
+  };
+
+  const handleAddFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !store.session) return;
+    store.setIsUploading(true);
+    
+    const fileList = Array.from(e.target.files);
+    const newFilesMap = new Map(store.filesMap);
+    const filesArray: { path: string; content: string }[] = [];
+
+    // Helper to read file content
+    const readFile = (file: File): Promise<{ path: string; content: string }> => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          resolve({
+            path: file.name, // Single files use just the filename
+            content: e.target?.result as string || '',
+          });
+        };
+        reader.readAsText(file);
+      });
+    };
+
+    // Process files
+    for (const file of fileList) {
+      const result = await readFile(file);
+      newFilesMap.set(result.path, result.content);
+      filesArray.push(result);
+    }
+
+    // Update store with new files added to existing ones
+    store.setFilesMap(newFilesMap);
+    
+    // Rebuild file tree with all files
+    const allFilesArray = Array.from(newFilesMap.entries()).map(([path, content]) => ({ path, content }));
+    const rootNodes = buildFileTree(allFilesArray);
+    store.setFileTree(rootNodes);
+    
+    // Save to IndexedDB
+    await store.saveToDB();
+    
     store.setIsUploading(false);
   };
 
@@ -146,11 +201,18 @@ export default function VaultPage() {
 
   return (
     <>
-      <VaultView
-        onUpload={handleFileUpload}
-        onShareFull={handleShareFull}
-        onShareSingle={handleShareSingle}
-      />
+      <div className="h-screen flex flex-col bg-[#0a0a0a]">
+        {/* Main Vault Interface */}
+        <VaultView
+          onUpload={handleFileUpload}
+          onAddFile={handleAddFile}
+          onShareFull={handleShareFull}
+          onShareSingle={handleShareSingle}
+        />
+        
+        {/* Project Switcher */}
+        <ProjectSwitcher />
+      </div>
 
       {/* Share Modal */}
       {store.shareUrl && (
