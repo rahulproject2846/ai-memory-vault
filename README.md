@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# The Vault - AI Native External Memory
 
-## Getting Started
+## Overview
+The Vault is an external memory bridge designed for AI. It features a Midnight Mode UI, recursive folder parsing, and a secure API for AI agents to retrieve raw code.
 
-First, run the development server:
+## Tech Stack
+- **Framework:** Next.js 15 (React 19)
+- **Styling:** Tailwind CSS (Midnight Mode)
+- **Database:** MongoDB
+- **Icons:** Lucide React
+- **Syntax Highlighting:** React Syntax Highlighter (Prism)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 1. The Visual Shell (UI)
+- **Midnight Mode:** Pure black (#000) background.
+- **File Tree:** Nested folder structure in a resizable sidebar.
+- **Code Viewer:** Syntax highlighting for TypeScript, JSX, JSON, etc.
+- **Session Info:** Displays the unique Session ID and Secret Key.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. The Brain (Upload Engine)
+- **Folder Upload:** Recursively parses folders.
+- **Chunked Processing:** Handles large file counts efficiently.
+- **Secure Storage:** Files are stored in MongoDB with a unique session ID.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. The API (AI Bridge)
+- **Endpoint:** `GET /api/vault/raw`
+- **Authentication:** Requires `filePath`, `passphrase`, and `sessionId`.
+- **Performance:** Returns raw text directly, optimized for AI consumption.
 
-## Learn More
+## Setup
 
-To learn more about Next.js, take a look at the following resources:
+1. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. **Database:**
+   Ensure MongoDB is running locally on `mongodb://localhost:27017` or set `MONGODB_URI` in `.env.local`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. **Run Development Server:**
+   ```bash
+   npm run dev
+   ```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. **Usage:**
+   - Open `http://localhost:3000`.
+   - A new session is created automatically.
+   - Click "Upload Folder" to select a directory.
+   - Files will be parsed and stored.
+   - Use the displayed API URL to fetch code programmatically.
