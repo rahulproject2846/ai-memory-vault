@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
     // Store in MongoDB with full project metadata
     await createSharedVault(shareId, files);
 
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    // Use the production URL for sharing
+    const baseUrl = 'https://ai-memory-vault.netlify.app';
     const shareUrl = `${baseUrl}/shared/${shareId}`;
     
     // Generate AI context template

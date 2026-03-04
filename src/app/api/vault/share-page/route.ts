@@ -15,10 +15,18 @@ export async function POST(req: NextRequest) {
     // Store in MongoDB with page-specific metadata
     await createSharedVault(shareId, files);
 
+    // Use the production URL for sharing
+    const baseUrl = 'https://ai-memory-vault.netlify.app';
+    const shareUrl = `${baseUrl}/shared/${shareId}`;
+    
+    // Generate AI context template for single file
+    const aiContextTemplate = `Hello AI, I am sharing a specific file. Access it here: ${shareUrl}`;
+
     return NextResponse.json({ 
       shareId,
       shareType,
-      url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/shared/${shareId}`
+      url: shareUrl,
+      aiContextTemplate
     });
   } catch (error) {
     console.error('Share page creation error:', error);
